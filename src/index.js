@@ -1,26 +1,41 @@
 /*
 Steps
 1. Get Access to Microphone
-2. Capture Audio Data
-3. Analyze Frequency
-4. Match Frequency to a Note
-5. Create a User Interface
+2. Analyze Frequency
+3. Match Frequency to a Note
+4. Create a User Interface
 */
 
-// 1. Get Access to Microphone
-navigator.mediaDevices
-  .getUserMedia({ audio: true })
-  .then((stream) => {
-    console.log(stream);
-  })
-  .catch((err) => {
-    throw new Error("Unable to gain access");
-  });
-// 2. Capture Audio Data
-// 3. Analyze Frequency
-// 4. Match Frequency to a Note
+// Variables/Inits
+let audioStream;
+const audioContext = new AudioContext();
+const analyser = audioContext.createAnalyser();
 
-// 5. Create a User Interface
+// 1. Get Access to Microphone
+async function getMicAccess() {
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    analyzeFrequency();
+  } catch (err) {
+    console.log("Cannot gain microphone access", err);
+  }
+}
+
+// 2. Analyze Frequency
+function analyzeFrequency() {
+  const source = audioContext.createMediaStreamSource(audioStream);
+  source.connect(analyser);
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(dataArray);
+  console.log(dataArray);
+}
+
+getMicAccess();
+
+// 3. Match Frequency to a Note
+
+// 4. Create a User Interface
 const render = () => {
   const App = document.createElement("div");
 
