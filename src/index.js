@@ -1,15 +1,7 @@
-/*
-Steps
-1. Get Access to Microphone
-2. Analyze Frequency
-3. Match Frequency to a Note
-4. Create a User Interface
-*/
-
 // Variables/Inits
-let dominantFrequency; //Will be used to match note to frequency
-// let ui; Used to constantly display the frequency
-let getPitch; //Function to dominantFrequency
+let dominantFrequency; // Will be used to match note to frequency
+let ui; // Used to constantly display the frequency
+let audioStream;
 const noteStrings = [
   "C",
   "C#",
@@ -24,53 +16,75 @@ const noteStrings = [
   "A#",
   "B",
 ];
+// Function to turn on mic and record
+const turnOnMic = () => {
+  if (navigator.mediaDevices) {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: false })
+      .then((stream) => {
+        processAudio(stream);
+      })
+      .catch((err) => console.log("ERROR", err));
+  }
+};
 
-if (navigator.mediaDevices) {
-  navigator.mediaDevices
-    .getUserMedia({ audio: true, video: false })
-    .then((stream) => {
-      let audioContext = new AudioContext();
-      let analyser = audioContext.createAnalyser();
+turnOnMic();
 
-      // Connect the microphone stream to the analyser
-      let source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
+// Function to get Pitch
+const getPitch = (analyser, audioContext, dataArray) => {
+  // Fills the data array with frequnecy data of audio currently being processed
+  analyser.getByteFrequencyData(dataArray);
+  // Iterate through the data array to find the max frequency
+  let max = -Infinity;
+  let maxIndex = -1;
 
-      let bufferLength = analyser.frequencyBinCount;
-      let dataArray = new Uint8Array(bufferLength);
+  for (let i = 0; i < dataArray.length; i++) {
+    if (dataArray[i] > max) {
+      max = dataArray[i];
+      maxIndex = i;
+    }
+  }
 
-      getPitch = function () {
-        // Fills the data array with frequnecy data of audio currently being processed
-        analyser.getByteFrequencyData(dataArray);
+  // Calculates the frequency in hertz that corresponds with maxIndex
+  // MaxIndex: index of the bin that has the highest amplitude
+  // audioContext: Sample rate of the audio context(sample per second)
+  dominantFrequency =
+    (maxIndex * audioContext.sampleRate) / (2 * dataArray.length);
 
-        // Iterate through the data array to find the max frequency
-        let max = -Infinity;
-        let maxIndex = -1;
+  // Updating here to see realtime data
+  ui.innerText = dominantFrequency;
+  // console.log(dominantFrequency);
 
-        for (let i = 0; i < dataArray.length; i++) {
-          if (dataArray[i] > max) {
-            max = dataArray[i];
-            maxIndex = i;
-          }
-        }
+  // Calls getPitch every frame of browser refresh
+  requestAnimationFrame(() => {
+    getPitch(analyser, audioContext, dataArray);
+    pitchToNote();
+  });
+};
 
-        //Calculates the frequency in hertz that corresponds with maxIndex
-        // MaxIndex: index of the bin that has the highest amplitude
-        // audioContext: Sample rate of the audio context(sample per second)
-        dominantFrequency =
-          (maxIndex * audioContext.sampleRate) / (2 * dataArray.length);
+// Function to process audio
 
-        // Updating here to see realtime data
-        ui.innerText = dominantFrequency;
+const processAudio = (stream) => {
+  let audioContext = new AudioContext();
+  let analyser = audioContext.createAnalyser();
+  let source = audioContext.createMediaStreamSource(stream);
 
-        // Calls getPitch every frame of browser refresh
-        // requestAnimationFrame(getPitch);
-      };
-      getPitch();
-    });
-}
+  source.connect(analyser);
 
-// 4. Create a User Interface
+  let bufferLength = analyser.frequencyBinCount;
+  let dataArray = new Uint8Array(bufferLength);
+
+  getPitch(analyser, audioContext, dataArray);
+};
+
+// Match the pitch to a note
+const pitchToNote = () => {
+  // console.log(dominantFrequency);
+};
+
+pitchToNote();
+
+// Create a User Interface
 const render = () => {
   const App = document.createElement("div");
 
@@ -86,14 +100,14 @@ const render = () => {
 
   // Tuner UI
   ui = document.createElement("div");
+  const note = document.createElement("h4");
 
   const root = document.getElementById("root");
-  Tuner.append(tunerTitle);
-  App.append(title, Tuner, ui);
+  Tuner.append(tunerTitle, ui);
+  App.append(title, Tuner);
   root.append(App);
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   render();
-  getPitch;
 });
