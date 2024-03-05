@@ -1,41 +1,90 @@
-/*
-Steps
-1. Get Access to Microphone
-2. Analyze Frequency
-3. Match Frequency to a Note
-4. Create a User Interface
-*/
-
 // Variables/Inits
+let dominantFrequency; // Will be used to match note to frequency
+let ui; // Used to constantly display the frequency
 let audioStream;
-const audioContext = new AudioContext();
-const analyser = audioContext.createAnalyser();
-
-// 1. Get Access to Microphone
-async function getMicAccess() {
-  try {
-    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    analyzeFrequency();
-  } catch (err) {
-    console.log("Cannot gain microphone access", err);
+const noteStrings = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+// Function to turn on mic and record
+const turnOnMic = () => {
+  if (navigator.mediaDevices) {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: false })
+      .then((stream) => {
+        processAudio(stream);
+      })
+      .catch((err) => console.log("ERROR", err));
   }
-}
+};
 
-// 2. Analyze Frequency
-function analyzeFrequency() {
-  const source = audioContext.createMediaStreamSource(audioStream);
+turnOnMic();
+
+// Function to get Pitch
+const getPitch = (analyser, audioContext, dataArray) => {
+  // Fills the data array with frequnecy data of audio currently being processed
+  analyser.getByteFrequencyData(dataArray);
+  // Iterate through the data array to find the max frequency
+  let max = -Infinity;
+  let maxIndex = -1;
+
+  for (let i = 0; i < dataArray.length; i++) {
+    if (dataArray[i] > max) {
+      max = dataArray[i];
+      maxIndex = i;
+    }
+  }
+
+  // Calculates the frequency in hertz that corresponds with maxIndex
+  // MaxIndex: index of the bin that has the highest amplitude
+  // audioContext: Sample rate of the audio context(sample per second)
+  dominantFrequency =
+    (maxIndex * audioContext.sampleRate) / (2 * dataArray.length);
+
+  // Updating here to see realtime data
+  ui.innerText = dominantFrequency;
+  // console.log(dominantFrequency);
+
+  // Calls getPitch every frame of browser refresh
+  requestAnimationFrame(() => {
+    getPitch(analyser, audioContext, dataArray);
+    pitchToNote();
+  });
+};
+
+// Function to process audio
+
+const processAudio = (stream) => {
+  let audioContext = new AudioContext();
+  let analyser = audioContext.createAnalyser();
+  let source = audioContext.createMediaStreamSource(stream);
+
   source.connect(analyser);
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-  analyser.getByteTimeDomainData(dataArray);
-  console.log(dataArray);
-}
 
-getMicAccess();
+  let bufferLength = analyser.frequencyBinCount;
+  let dataArray = new Uint8Array(bufferLength);
 
-// 3. Match Frequency to a Note
+  getPitch(analyser, audioContext, dataArray);
+};
 
-// 4. Create a User Interface
+// Match the pitch to a note
+const pitchToNote = () => {
+  // console.log(dominantFrequency);
+};
+
+pitchToNote();
+
+// Create a User Interface
 const render = () => {
   const App = document.createElement("div");
 
@@ -50,12 +99,12 @@ const render = () => {
   tunerTitle.innerText = "Tune Guitar Here";
 
   // Tuner UI
-  const ui = document.createElement("div");
-  ui.innerText = "Tuner UI";
+  ui = document.createElement("div");
+  const note = document.createElement("h4");
 
   const root = document.getElementById("root");
-  Tuner.append(tunerTitle);
-  App.append(title, Tuner, ui);
+  Tuner.append(tunerTitle, ui);
+  App.append(title, Tuner);
   root.append(App);
 };
 
