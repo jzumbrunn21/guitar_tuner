@@ -1,7 +1,7 @@
 // Variables/Inits
 let dominantFrequency; // Will be used to match note to frequency
 let ui; // Used to constantly display the frequency
-let audioStream;
+let note;
 const noteStrings = [
   "C",
   "C#",
@@ -58,7 +58,7 @@ const getPitch = (analyser, audioContext, dataArray) => {
   // Calls getPitch every frame of browser refresh
   requestAnimationFrame(() => {
     getPitch(analyser, audioContext, dataArray);
-    pitchToNote();
+    note.innerText = pitchToNote();
   });
 };
 
@@ -80,9 +80,10 @@ const processAudio = (stream) => {
 // Match the pitch to a note
 const pitchToNote = () => {
   // console.log(dominantFrequency);
+  return dominantFrequency;
 };
 
-pitchToNote();
+// pitchToNote();
 
 // Create a User Interface
 const render = () => {
@@ -100,10 +101,10 @@ const render = () => {
 
   // Tuner UI
   ui = document.createElement("div");
-  const note = document.createElement("h4");
+  note = document.createElement("h4");
 
   const root = document.getElementById("root");
-  Tuner.append(tunerTitle, ui);
+  Tuner.append(tunerTitle, ui, note);
   App.append(title, Tuner);
   root.append(App);
 };
